@@ -26,20 +26,31 @@ const BASE_URL =
       });
   }
 
-  const updateExchangeRate = async () => {
-    let amount = document.querySelector(".amount input");
-    let amtVal = amount.value;
-    if (amtVal === "" || amtVal < 1) {
-      amtVal = 1;
-      amount.value = "1";
+  async function updateExchangeRate() {
+    const fromCurrency = document.querySelector(".from select").value;
+    const toCurrency = document.querySelector(".to select").value;
+    const amountInput = document.querySelector(".amount input");
+    let amount = parseFloat(amountInput.value);
+
+    if (isNaN(amount) || amount <= 0) {
+        msg.textContent = "Please enter a valid amount.";
+        return;
     }
-    const URL = `${BASE_URL}/${fromCurr.value.toLowerCase()}/${toCurr.value.toLowerCase()}.json`;
-    let response = await fetch(URL);
-    let data = await response.json();
-    let rate = data[toCurr.value.toLowerCase()];
-  
-    let finalAmount = amtVal * rate;
-    msg.innerText = `${amtVal} ${fromCurr.value} = ${finalAmount} ${toCurr.value}`;
+
+    try {
+        // Fetch the exchange rate using the getCurrencyRates function
+        const exchangeRate = await getCurrencyRates(fromCurrency, toCurrency);
+        
+        if (exchangeRate) {
+            const convertedAmount = (amount * exchangeRate).toFixed(2);
+            msg.textContent = `${amount} ${fromCurrency} is approximately ${convertedAmount} ${toCurrency}`;
+        } else {
+            msg.textContent = "Failed to fetch the exchange rate.";
+        }
+    } catch (error) {
+        console.error('Error during currency conversion:', error);
+        msg.textContent = "Error during currency conversion. Please try again.";
+    }
   };
 
   const updateFlag = (element) => {
@@ -58,3 +69,25 @@ const BASE_URL =
   window.addEventListener("load", () => {
     updateExchangeRate();
   });
+
+  async function getCurrencyRates(fromCurrency, toCurrency) {
+    const apiUrl = `https://api.currencyapi.com/v3/latest?apikey=cur_live_0Hka21PYwkVNiuxMZ7YZRq2HiZo6kRHCsrTiILab&currencies=${fromCurrency},${toCurrency}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+        const fromRate = data.data[fromCurrency].value;
+        const toRate = data.data[toCurrency].value;
+        return (toRate / fromRate).toFixed(4); // Calculate and return the exchange rate
+    } catch (error) {
+        console.error('Failed to fetch currency rates:', error);
+        return null;
+    }
+  }
+
+
+
+
